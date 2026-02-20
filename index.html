@@ -59,14 +59,42 @@
         let chart;
         const status = document.getElementById('statusMessage');
 
-        async function runAnalysis() {
-            const key = document.getElementById('apiKey').value.trim();
-            const symbol = document.getElementById('ticker').value.trim().toUpperCase();
-            const backlog = document.getElementById('manualBacklog').value;
+        async function async function runAnalysis() {
+    const key = document.getElementById('apiKey').value.trim();
+    const symbol = document.getElementById('ticker').value.trim().toUpperCase();
+    const backlog = parseFloat(document.getElementById('manualBacklog').value);
 
-            if(!key || !symbol) {
-                showStatus("TERMINAL ERROR: MISSING PARAMETERS");
-                return;
+    showStatus("ESTABLISHING SECURE LINK...");
+
+    try {
+        const url = `https://financialmodelingprep.com/api/v3/income-statement/${symbol}?limit=4&apikey=${key}`;
+        const response = await fetch(url);
+        
+        // CHECK 1: Did the server send an error code (like 429)?
+        if (!response.ok) {
+            showStatus(`SERVER ERROR: ${response.status} (Check Credits)`);
+            return;
+        }
+
+        const data = await response.json();
+
+        // CHECK 2: Is the response an error message instead of an array?
+        if (data["Error Message"] || data.length === 0) {
+            showStatus("LINK BLOCKED: Limit Reached or Restricted Ticker");
+            return;
+        }
+
+        // Logic for Visibility and Multiplier
+        const ttmRevenue = data.reduce((sum, q) => sum + q.revenue, 0) / 1000000;
+        document.getElementById('visVal').innerText = (backlog / ttmRevenue).toFixed(2) + " Yrs";
+        document.getElementById('btbVal').innerText = (backlog / ttmRevenue).toFixed(1) + "x";
+
+        document.getElementById('resultsArea').classList.remove('hidden');
+        status.classList.add('hidden');
+        renderChart(data.reverse());
+
+    } catch (err) {
+        showStatus("CRITICAL ERROR: " + err.message);
             }
 
             showStatus("QUERYING STABLE DATA STREAM...");
