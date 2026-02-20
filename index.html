@@ -101,9 +101,12 @@
                 status.classList.add('hidden');
                 renderChart(data.slice(0, 4).reverse());
 
-            } catch (err) {
-                showStatus("COMM LINK FAILURE: CHECK NETWORK");
-            }
+            }  catch (err) {
+    // This is the code fix to show the REAL error
+    showStatus("ERROR: " + err.message);
+    console.error(err);
+}
+
         }
 
         function showStatus(msg) {
