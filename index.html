@@ -106,7 +106,6 @@
     showStatus("ERROR: " + err.message);
     console.error(err);
 }
-
         }
 
         function showStatus(msg) {
@@ -120,7 +119,7 @@
             chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.map(q => q.period + ' ' + q.calendarYear.toString().slice(2)),
+                    labels: data.map(q => q.period + ' ' + (q.calendarYear ? q.calendarYear.toString().slice(2) : '??')),
                     datasets: [{
                         label: 'Revenue ($M)',
                         data: data.map(q => q.revenue / 1000000),
