@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Defense Intel Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased p-4">
+    <div class="max-w-md mx-auto">
+        <header class="mb-6">
+            <h1 class="text-2xl font-black tracking-tight text-blue-500 uppercase">Defense Intel</h1>
+            <p class="text-slate-500 text-[10px] font-mono tracking-widest uppercase">System Status: Stable API 2026</p>
+        </header>
+
+        <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-2xl mb-6">
+            <div class="space-y-3">
+                <input id="apiKey" type="password" placeholder="API KEY (32 CHARS)" 
+                    class="w-full bg-slate-900 border border-slate-600 p-3 rounded-xl text-sm focus:border-blue-500 outline-none transition-all">
+                
+                <div class="flex gap-2">
+                    <input id="ticker" type="text" placeholder="TICKER" 
+                        class="w-2/3 bg-slate-900 border border-slate-600 p-3 rounded-xl text-sm uppercase font-bold focus:border-blue-500 outline-none">
+                    <input id="manualBacklog" type="number" placeholder="BACKLOG ($M)" 
+                        class="w-full bg-slate-900 border border-slate-600 p-3 rounded-xl text-sm focus:border-blue-500 outline-none">
+                </div>
+
+                <button onclick="runAnalysis()" 
+                    class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.98] py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-900/20 transition-all">
+                    Execute Analysis
+                </button>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="text-center text-[10px] text-yellow-500 font-bold mb-4 hidden animate-pulse"></div>
+
+        <div id="resultsArea" class="hidden space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 text-center">
+                    <span class="text-slate-500 text-[9px] font-bold uppercase block mb-1">Contract Visibility</span>
+                    <div id="visVal" class="text-xl font-black text-blue-400">--</div>
+                    <span class="text-[9px] text-slate-600">Years of Guaranteed Work</span>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 text-center">
+                    <span class="text-slate-500 text-[9px] font-bold uppercase block mb-1">Scale Multiplier</span>
+                    <div id="btbVal" class="text-xl font-black text-green-400">--</div>
+                    <span class="text-[9px] text-slate-600">Backlog vs. Annual Rev</span>
+                </div>
+            </div>
+            
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 h-64">
+                <canvas id="revChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        const status = document.getElementById('statusMessage');
+
+        async function runAnalysis() {
+            const key = document.getElementById('apiKey').value.trim();
+            const symbol = document.getElementById('ticker').value.trim().toUpperCase();
+            const backlog = document.getElementById('manualBacklog').value;
+
+            if(!key || !symbol) {
+                showStatus("TERMINAL ERROR: MISSING PARAMETERS");
+                return;
+            }
+
+            showStatus("QUERYING STABLE DATA STREAM...");
+
+            try {
+                // Using the 2026 Stable Endpoint as required by FMP
+                const url = `https://financialmodelingprep.com/stable/income-statement?symbol=${symbol}&apikey=${key}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data["Error Message"] || data["message"]) {
+                    showStatus("GATEWAY DENIED: " + (data["Error Message"] || data["message"]));
+                    return;
+                }
+
+                if(!data || data.length === 0) {
+                    showStatus("NULL RESPONSE: VERIFY TICKER");
+                    return;
+                }
+
+                // Calculation Logic
+                const latestQ = data[0];
+                const annualRevMillions = (latestQ.revenue * 4) / 1000000;
+                
+                if(backlog) {
+                    const visibility = (backlog / annualRevMillions).toFixed(2);
+                    document.getElementById('visVal').innerText = visibility + " Yrs";
+                    document.getElementById('btbVal').innerText = (backlog / annualRevMillions).toFixed(1) + "x";
+                }
+
+                document.getElementById('resultsArea').classList.remove('hidden');
+                status.classList.add('hidden');
+                renderChart(data.slice(0, 4).reverse());
+
+            } catch (err) {
+                showStatus("COMM LINK FAILURE: CHECK NETWORK");
+            }
+        }
+
+        function showStatus(msg) {
+            status.innerText = msg;
+            status.classList.remove('hidden');
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('revChart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(q => q.period + ' ' + q.calendarYear.toString().slice(2)),
+                    datasets: [{
+                        label: 'Revenue ($M)',
+                        data: data.map(q => q.revenue / 1000000),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 8
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        y: { ticks: { color: '#475569', font: { size: 9, weight: 'bold' } }, grid: { color: '#1e293b' } },
+                        x: { ticks: { color: '#94a3b8', font: { size: 9, weight: 'bold' } }, grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
