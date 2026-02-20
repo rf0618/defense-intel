@@ -75,8 +75,24 @@
                 // Using the 2026 Stable Endpoint as required by FMP
                 const url = `https://financialmodelingprep.com/stable/income-statement?symbol=${symbol}&apikey=${key}`;
                 const response = await fetch(url);
-                const data = await response.json();
-                
+                const data = // New "Pattern-Safe" Fetch Logic
+const response = await fetch(url);
+
+// 1. First, check if the server even sent a 'Success' code
+if (!response.ok) {
+    const errorText = await response.text(); 
+    showStatus("SERVER ERROR: " + response.status + " - " + errorText);
+    return;
+}
+
+// 2. Safely parse the JSON
+const data = await response.json();
+
+// 3. Check if the data is empty (Common with NOC on free tier)
+if (!data || data.length === 0 || data["Error Message"]) {
+    showStatus("DATA LINK BLOCKED: Ticker Restricted or Limit Reached");
+    return;
+}   
                 if (data["Error Message"] || data["message"]) {
                     showStatus("GATEWAY DENIED: " + (data["Error Message"] || data["message"]));
                     return;
