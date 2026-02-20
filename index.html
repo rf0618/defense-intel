@@ -123,7 +123,6 @@
     const year = q.calendarYear || q.date?.split('-')[0] || q.fillingDate?.split('-')[0] || '??';
     return q.period + ' ' + year.toString().slice(-2);
 }),
-
                     datasets: [{
                         label: 'Revenue ($M)',
                         data: data.map(q => q.revenue / 1000000),
